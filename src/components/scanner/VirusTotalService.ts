@@ -1,4 +1,3 @@
-
 interface VirusTotalResponse {
   data: {
     attributes: {
@@ -55,6 +54,52 @@ const saveScanResult = (scanResult: any, file: File, scanEngine: string) => {
   } catch (error) {
     console.error('Error saving scan result to localStorage:', error);
     return null;
+  }
+};
+
+export const scanUrlWithVirusTotal = async (url: string, apiKey: string): Promise<any> => {
+  try {
+    // Step 1: Submit the URL for scanning
+    const submitResponse = await fetch('https://www.virustotal.com/vtapi/v2/url/scan', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: `apikey=${apiKey}&url=${encodeURIComponent(url)}`
+    });
+
+    const submitData = await submitResponse.json();
+    if (!submitData.scan_id) {
+      throw new Error('Failed to submit URL for scanning');
+    }
+
+    // Step 2: Wait a few seconds for initial analysis
+    await new Promise(resolve => setTimeout(resolve, 3000));
+
+    // Step 3: Get the scan results
+    const resultResponse = await fetch(`https://www.virustotal.com/vtapi/v2/url/report?apikey=${apiKey}&resource=${encodeURIComponent(url)}`, {
+      method: 'GET',
+    });
+
+    const resultData = await resultResponse.json();
+    
+    return {
+      detectionRate: (resultData.positives / resultData.total) * 100,
+      threatLevel: resultData.positives > 0 ? 
+        (resultData.positives > 10 ? 'high' : 'medium') : 
+        'safe',
+      stats: {
+        malicious: resultData.positives,
+        suspicious: 0,
+        undetected: resultData.total - resultData.positives,
+      },
+      detectedBy: Object.entries(resultData.scans)
+        .filter(([_, scan]: [string, any]) => scan.detected)
+        .map(([name]: [string, any]) => name)
+    };
+  } catch (error) {
+    console.error('VirusTotal URL scan error:', error);
+    throw error;
   }
 };
 
