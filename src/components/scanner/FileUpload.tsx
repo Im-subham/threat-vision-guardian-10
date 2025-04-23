@@ -1,6 +1,5 @@
-
 import React, { useState } from 'react';
-import { Upload } from 'lucide-react';
+import { Upload, X, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { toast } from 'sonner';
