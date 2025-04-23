@@ -10,103 +10,9 @@ import { ScanResultData } from '@/components/scanner/ScanResult';
 import { DashboardStats } from '@/components/dashboard/StatCards';
 
 const Dashboard = () => {
-  // Mocked scan history data for demonstration
-  const [scanHistory, setScanHistory] = useState<ScanResultData[]>([
-    {
-      fileName: 'document.pdf',
-      fileSize: 2.5 * 1024 * 1024,
-      fileType: 'PDF Document',
-      scanEngine: 'virustotal',
-      isInfected: false,
-      threatLevel: 'safe',
-      detectionRate: 0,
-      engineResults: {
-        virustotal: {
-          positives: 0,
-          total: 68,
-          detectedBy: []
-        }
-      },
-      scanDate: new Date(Date.now() - 24 * 60 * 60 * 1000) // 1 day ago
-    },
-    {
-      fileName: 'suspicious_file.exe',
-      fileSize: 4.7 * 1024 * 1024,
-      fileType: 'Windows Executable',
-      scanEngine: 'both',
-      isInfected: true,
-      threatLevel: 'high',
-      detectionRate: 85,
-      engineResults: {
-        virustotal: {
-          positives: 58,
-          total: 68,
-          detectedBy: ['Avast', 'Kaspersky', 'Norton', 'McAfee', 'Microsoft']
-        },
-        ml: {
-          confidence: 95,
-          malwareType: 'Trojan',
-          isInfected: true
-        }
-      },
-      scanDate: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000) // 2 days ago
-    },
-    {
-      fileName: 'presentation.pptx',
-      fileSize: 8.1 * 1024 * 1024,
-      fileType: 'PowerPoint Presentation',
-      scanEngine: 'ml',
-      isInfected: false,
-      threatLevel: 'safe',
-      engineResults: {
-        ml: {
-          confidence: 98,
-          isInfected: false
-        }
-      },
-      scanDate: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000) // 3 days ago
-    },
-    {
-      fileName: 'script.js',
-      fileSize: 0.3 * 1024 * 1024,
-      fileType: 'JavaScript File',
-      scanEngine: 'both',
-      isInfected: true,
-      threatLevel: 'medium',
-      detectionRate: 45,
-      engineResults: {
-        virustotal: {
-          positives: 31,
-          total: 68,
-          detectedBy: ['Avast', 'BitDefender', 'Avira']
-        },
-        ml: {
-          confidence: 65,
-          malwareType: 'Potentially Unwanted Program',
-          isInfected: true
-        }
-      },
-      scanDate: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000) // 4 days ago
-    },
-    {
-      fileName: 'image.png',
-      fileSize: 1.2 * 1024 * 1024,
-      fileType: 'PNG Image',
-      scanEngine: 'virustotal',
-      isInfected: false,
-      threatLevel: 'safe',
-      detectionRate: 0,
-      engineResults: {
-        virustotal: {
-          positives: 0,
-          total: 68,
-          detectedBy: []
-        }
-      },
-      scanDate: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000) // 5 days ago
-    }
-  ]);
-
+  // State for scan history from localStorage
+  const [scanHistory, setScanHistory] = useState<ScanResultData[]>([]);
+  
   // Calculate dashboard stats from scan history
   const [stats, setStats] = useState<DashboardStats>({
     totalScans: 0,
@@ -123,14 +29,73 @@ const Dashboard = () => {
   });
 
   // Monthly detection history data
-  const [detectionHistory, setDetectionHistory] = useState([
-    { name: 'Jan', clean: 12, infected: 3 },
-    { name: 'Feb', clean: 19, infected: 4 },
-    { name: 'Mar', clean: 15, infected: 2 },
-    { name: 'Apr', clean: 18, infected: 1 },
-    { name: 'May', clean: 14, infected: 5 },
-    { name: 'Jun', clean: 21, infected: 3 }
-  ]);
+  const [detectionHistory, setDetectionHistory] = useState<{ name: string; clean: number; infected: number; }[]>([]);
+
+  // Load scan history from localStorage on component mount
+  useEffect(() => {
+    const storedScanHistory = localStorage.getItem('scanHistory');
+    if (storedScanHistory) {
+      try {
+        const parsedHistory = JSON.parse(storedScanHistory);
+        
+        // Convert string dates back to Date objects
+        const processedHistory: ScanResultData[] = parsedHistory.map((scan: any) => ({
+          ...scan,
+          scanDate: new Date(scan.scanDate)
+        }));
+        
+        setScanHistory(processedHistory);
+      } catch (error) {
+        console.error('Failed to parse scan history:', error);
+        setScanHistory([]);
+      }
+    }
+  }, []);
+
+  // Generate monthly detection data based on actual scan history
+  useEffect(() => {
+    if (scanHistory.length > 0) {
+      // Get the last 6 months
+      const months = [];
+      const today = new Date();
+      for (let i = 5; i >= 0; i--) {
+        const month = new Date(today.getFullYear(), today.getMonth() - i, 1);
+        months.push({
+          name: month.toLocaleString('default', { month: 'short' }),
+          month: month.getMonth(),
+          year: month.getFullYear()
+        });
+      }
+      
+      // Count scans by month
+      const monthlyData = months.map(monthData => {
+        const monthScans = scanHistory.filter(scan => {
+          const scanMonth = scan.scanDate.getMonth();
+          const scanYear = scan.scanDate.getFullYear();
+          return scanMonth === monthData.month && scanYear === monthData.year;
+        });
+        
+        const clean = monthScans.filter(scan => !scan.isInfected).length;
+        const infected = monthScans.filter(scan => scan.isInfected).length;
+        
+        return {
+          name: monthData.name,
+          clean,
+          infected
+        };
+      });
+      
+      setDetectionHistory(monthlyData);
+    } else {
+      // If no scan history, set empty data for all months
+      const emptyMonths = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'].map(month => ({
+        name: month,
+        clean: 0,
+        infected: 0
+      }));
+      setDetectionHistory(emptyMonths);
+    }
+  }, [scanHistory]);
 
   // Calculate stats whenever scan history changes
   useEffect(() => {

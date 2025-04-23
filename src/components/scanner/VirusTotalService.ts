@@ -19,6 +19,45 @@ interface VirusTotalResponse {
   };
 }
 
+// Helper function to save scan result to localStorage
+const saveScanResult = (scanResult: any, file: File, scanEngine: string) => {
+  try {
+    // Get existing scan history
+    const existingHistoryJson = localStorage.getItem('scanHistory');
+    const existingHistory = existingHistoryJson ? JSON.parse(existingHistoryJson) : [];
+    
+    // Create new scan result entry
+    const newScanResult = {
+      fileName: file.name,
+      fileSize: file.size,
+      fileType: file.type || file.name.split('.').pop()?.toUpperCase() + ' File',
+      scanEngine: scanEngine,
+      isInfected: scanResult.detectionRate > 0,
+      detectionRate: scanResult.detectionRate,
+      threatLevel: scanResult.threatLevel,
+      engineResults: {
+        virustotal: {
+          positives: scanResult.stats.malicious,
+          total: scanResult.stats.malicious + scanResult.stats.undetected,
+          detectedBy: scanResult.detectedBy
+        }
+      },
+      scanDate: new Date().toISOString() // Store as string for JSON serialization
+    };
+    
+    // Add to history
+    const updatedHistory = [newScanResult, ...existingHistory];
+    
+    // Store back in localStorage (limit to 50 entries to prevent storage issues)
+    localStorage.setItem('scanHistory', JSON.stringify(updatedHistory.slice(0, 50)));
+    
+    return newScanResult;
+  } catch (error) {
+    console.error('Error saving scan result to localStorage:', error);
+    return null;
+  }
+};
+
 export const scanFileWithVirusTotal = async (file: File, apiKey: string): Promise<any> => {
   try {
     // For browser-based scanning, we need to use a proxy or backend service
@@ -66,8 +105,8 @@ export const scanFileWithVirusTotal = async (file: File, apiKey: string): Promis
     
     console.log(`Simulation complete - Detection rate: ${detectionRate}%, Threat level: ${threatLevel}`);
     
-    // Return simulated result that matches the expected structure
-    return {
+    // Create scan result
+    const scanResult = {
       detectionRate,
       threatLevel,
       stats: {
@@ -79,6 +118,12 @@ export const scanFileWithVirusTotal = async (file: File, apiKey: string): Promis
       },
       detectedBy
     };
+    
+    // Save scan result to localStorage
+    saveScanResult(scanResult, file, 'virustotal');
+    
+    // Return simulated result that matches the expected structure
+    return scanResult;
     
     /* Real VirusTotal API implementation (needs a backend proxy)
     // Step 1: Get upload URL
