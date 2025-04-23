@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
@@ -8,6 +7,7 @@ import ScanOptions, { ScanEngine } from '@/components/scanner/ScanOptions';
 import ScanResult, { ScanResultData } from '@/components/scanner/ScanResult';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { scanFileWithVirusTotal } from '@/components/scanner/VirusTotalService';
 
 const ScanPage = () => {
@@ -284,56 +284,92 @@ const ScanPage = () => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="min-h-screen flex flex-col bg-[#14151A] text-white">
       <Navbar />
       <div className="flex-1 pt-16">
-        <div className="container mx-auto px-4 py-8">
-          <div className="max-w-3xl mx-auto">
-            <h1 className="text-3xl font-bold mb-6">Malware Scanner</h1>
-            
-            <ScanOptions 
-              selectedEngine={scanEngine}
-              onEngineChange={setScanEngine}
-              disabled={isScanning}
+        <div className="container mx-auto px-4 py-12">
+          <div className="max-w-4xl mx-auto text-center">
+            <img 
+              src="/lovable-uploads/578e1dcf-aaef-4393-9807-6c48f3105905.png" 
+              alt="VirusTotal Logo" 
+              className="h-16 mx-auto mb-6"
             />
-            
-            <div className="space-y-6 mt-6">
-              <FileUpload 
-                onFileSelected={handleFileSelected}
-                isScanning={isScanning}
-              />
-              
-              <div className="relative py-4">
-                <div className="absolute inset-0 flex items-center">
-                  <div className="w-full border-t"></div>
+            <p className="text-lg text-gray-400 mb-12 max-w-2xl mx-auto">
+              Analyze suspicious files, domains, IPs and URLs to detect malware and other
+              breaches, automatically share them with the security community.
+            </p>
+
+            <Tabs defaultValue="file" className="w-full">
+              <TabsList className="w-full max-w-md grid grid-cols-3 h-12 mb-8 bg-[#1E1F25]">
+                <TabsTrigger 
+                  value="file"
+                  className="text-lg data-[state=active]:bg-[#3367d6] data-[state=active]:text-white"
+                >
+                  FILE
+                </TabsTrigger>
+                <TabsTrigger 
+                  value="url"
+                  className="text-lg data-[state=active]:bg-[#3367d6] data-[state=active]:text-white"
+                >
+                  URL
+                </TabsTrigger>
+                <TabsTrigger 
+                  value="search"
+                  className="text-lg data-[state=active]:bg-[#3367d6] data-[state=active]:text-white"
+                >
+                  SEARCH
+                </TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="file" className="mt-0">
+                <FileUpload 
+                  onFileSelected={handleFileSelected}
+                  isScanning={isScanning}
+                />
+              </TabsContent>
+
+              <TabsContent value="url" className="mt-0">
+                <UrlInput 
+                  onUrlSubmitted={handleUrlSubmitted}
+                  isScanning={isScanning}
+                />
+              </TabsContent>
+
+              <TabsContent value="search" className="mt-0">
+                <div className="text-center py-12 text-gray-400">
+                  Search functionality coming soon
                 </div>
-                <div className="relative flex justify-center">
-                  <span className="bg-background px-4 text-sm text-muted-foreground">
-                    OR
-                  </span>
-                </div>
-              </div>
-              
-              <UrlInput 
-                onUrlSubmitted={handleUrlSubmitted}
-                isScanning={isScanning}
-              />
-            </div>
-            
+              </TabsContent>
+            </Tabs>
+
             {(selectedFile || selectedUrl) && !isScanning && !scanResult && (
               <div className="mt-6 flex justify-center">
-                <Button onClick={handleStartScan} disabled={isScanning} size="lg">
+                <Button 
+                  onClick={handleStartScan} 
+                  disabled={isScanning}
+                  className="bg-[#3367d6] hover:bg-[#3367d6]/90 text-white px-8 py-2 rounded"
+                >
                   Start Scan
                 </Button>
               </div>
             )}
-            
+
             <ScanResult 
               result={scanResult}
               isScanning={isScanning}
               scanProgress={scanProgress}
               onNewScan={handleNewScan}
             />
+
+            <div className="mt-8 text-sm text-gray-500">
+              <p>
+                By submitting data above, you are agreeing to our Terms of Service and Privacy Notice, 
+                and to the sharing of your submission with the security community.
+              </p>
+              <p className="mt-2">
+                Please do not submit any personal information; we are not responsible for the contents of your submission.
+              </p>
+            </div>
           </div>
         </div>
       </div>

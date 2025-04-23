@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { Upload, X, AlertCircle } from 'lucide-react';
+import { Upload } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { toast } from 'sonner';
@@ -83,27 +83,26 @@ const FileUpload = ({ onFileSelected, isScanning }: FileUploadProps) => {
       {!selectedFile ? (
         <div
           className={`border-2 border-dashed rounded-lg p-6 text-center ${
-            isDragging ? 'border-primary bg-primary/5' : 'border-border'
-          } transition-colors duration-200`}
+            isDragging ? 'border-[#3367d6] bg-[#3367d6]/5' : 'border-gray-600'
+          } transition-colors duration-200 bg-[#1E1F25]`}
           onDragOver={handleDragOver}
           onDragLeave={handleDragLeave}
           onDrop={handleDrop}
         >
           <div className="flex flex-col items-center justify-center py-10">
-            <Upload className="h-12 w-12 text-muted-foreground mb-4" />
-            <h3 className="text-lg font-semibold mb-2">Upload file for scanning</h3>
-            <p className="text-sm text-muted-foreground mb-4">
-              Drag and drop your file here, or click to browse
-            </p>
-            <p className="text-xs text-muted-foreground mb-6">
-              Maximum file size: 50MB
-            </p>
+            <div className="w-24 h-24 mb-6 relative">
+              <div className="absolute inset-0 flex items-center justify-center">
+                <Upload className="h-12 w-12 text-[#3367d6]" />
+              </div>
+              <div className="absolute inset-0 border-4 border-[#3367d6]/30 rounded-lg"></div>
+            </div>
             <Button
               type="button"
               onClick={() => document.getElementById('file-upload')?.click()}
-              className="relative"
+              className="bg-[#3367d6] hover:bg-[#3367d6]/90 text-white px-8 py-2 rounded"
+              disabled={isScanning}
             >
-              Browse Files
+              Choose file
               <input
                 id="file-upload"
                 name="file-upload"
@@ -113,6 +112,9 @@ const FileUpload = ({ onFileSelected, isScanning }: FileUploadProps) => {
                 disabled={isScanning}
               />
             </Button>
+            <p className="text-sm text-gray-400 mt-4">
+              Maximum file size: 50MB
+            </p>
           </div>
         </div>
       ) : (

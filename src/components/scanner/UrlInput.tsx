@@ -17,7 +17,6 @@ const UrlInput = ({ onUrlSubmitted, isScanning }: UrlInputProps) => {
     e.preventDefault();
     
     try {
-      // Basic URL validation
       new URL(url);
       onUrlSubmitted(url);
       setUrl('');
@@ -29,33 +28,29 @@ const UrlInput = ({ onUrlSubmitted, isScanning }: UrlInputProps) => {
   };
 
   return (
-    <div className="border rounded-lg p-6">
-      <div className="flex flex-col space-y-4">
-        <div className="flex items-center space-x-2">
-          <div className="p-2 rounded-md bg-primary/10">
-            <Link className="h-5 w-5 text-primary" />
+    <div className="border border-gray-600 rounded-lg p-6 bg-[#1E1F25]">
+      <form onSubmit={handleSubmit} className="flex flex-col sm:flex-row gap-3">
+        <div className="flex-1 relative">
+          <div className="absolute left-3 top-1/2 -translate-y-1/2">
+            <Link className="h-5 w-5 text-[#3367d6]" />
           </div>
-          <h3 className="font-medium">Scan URL</h3>
-        </div>
-        
-        <form onSubmit={handleSubmit} className="flex flex-col sm:flex-row gap-3">
           <Input
             type="text"
             placeholder="Enter URL to scan (e.g., https://example.com)"
             value={url}
             onChange={(e) => setUrl(e.target.value)}
             disabled={isScanning}
-            className="flex-1"
+            className="pl-10 bg-[#14151A] border-gray-600 text-white placeholder:text-gray-500"
           />
-          <Button type="submit" disabled={isScanning || !url}>
-            Scan URL
-          </Button>
-        </form>
-        
-        <p className="text-sm text-muted-foreground">
-          Enter any suspicious URL to check for potential security threats
-        </p>
-      </div>
+        </div>
+        <Button 
+          type="submit" 
+          disabled={isScanning || !url}
+          className="bg-[#3367d6] hover:bg-[#3367d6]/90 text-white px-8 py-2"
+        >
+          Scan URL
+        </Button>
+      </form>
     </div>
   );
 };
