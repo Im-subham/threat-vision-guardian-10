@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
@@ -7,6 +6,7 @@ import ScanOptions, { ScanEngine } from '@/components/scanner/ScanOptions';
 import ScanResult, { ScanResultData } from '@/components/scanner/ScanResult';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
+import { scanFileWithVirusTotal } from '@/components/scanner/VirusTotalService';
 
 const ScanPage = () => {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -22,7 +22,7 @@ const ScanPage = () => {
   };
 
   // Handle scan initiation
-  const handleStartScan = () => {
+  const handleStartScan = async () => {
     if (!selectedFile) {
       toast.error('No file selected', {
         description: 'Please select a file to scan'
@@ -34,17 +34,84 @@ const ScanPage = () => {
     setScanProgress(0);
     setScanResult(null);
 
-    // Simulate scanning progress
-    const interval = setInterval(() => {
-      setScanProgress(prev => {
-        if (prev >= 100) {
-          clearInterval(interval);
-          simulateCompleteScan();
-          return 100;
+    try {
+      if (scanEngine === 'virustotal' || scanEngine === 'both') {
+        const apiKey = localStorage.getItem('virusTotalApiKey') || prompt('Please enter your VirusTotal API key:');
+        if (!apiKey) {
+          setIsScanning(false);
+          toast.error('API key required', {
+            description: 'Please provide a VirusTotal API key to continue'
+          });
+          return;
         }
-        return prev + Math.floor(Math.random() * 5) + 1;
-      });
-    }, 300);
+        localStorage.setItem('virusTotalApiKey', apiKey);
+
+        // Simulate initial progress
+        const progressInterval = setInterval(() => {
+          setScanProgress(prev => {
+            if (prev >= 90) {
+              clearInterval(progressInterval);
+              return 90;
+            }
+            return prev + Math.floor(Math.random() * 5) + 1;
+          });
+        }, 300);
+
+        try {
+          const vtResults = await scanFileWithVirusTotal(selectedFile, apiKey);
+          
+          clearInterval(progressInterval);
+          setScanProgress(100);
+
+          const result: ScanResultData = {
+            fileName: selectedFile.name,
+            fileSize: selectedFile.size,
+            fileType: getFileType(selectedFile.name),
+            scanEngine,
+            isInfected: vtResults.detectionRate > 0,
+            detectionRate: vtResults.detectionRate,
+            threatLevel: vtResults.threatLevel,
+            engineResults: {
+              virustotal: {
+                positives: vtResults.stats.malicious,
+                total: vtResults.stats.malicious + vtResults.stats.undetected,
+                detectedBy: vtResults.detectedBy
+              }
+            },
+            scanDate: new Date()
+          };
+
+          setScanResult(result);
+          toast[result.isInfected ? 'error' : 'success'](
+            result.isInfected ? 'Threat detected!' : 'Scan completed',
+            {
+              description: result.isInfected 
+                ? 'The scanned file contains malicious code' 
+                : 'No threats were found in the file'
+            }
+          );
+        } catch (error) {
+          toast.error('VirusTotal scan failed', {
+            description: 'An error occurred while scanning the file'
+          });
+          console.error('VirusTotal scan error:', error);
+        }
+      } else {
+        // Simulate scanning progress
+        const interval = setInterval(() => {
+          setScanProgress(prev => {
+            if (prev >= 100) {
+              clearInterval(interval);
+              simulateCompleteScan();
+              return 100;
+            }
+            return prev + Math.floor(Math.random() * 5) + 1;
+          });
+        }, 300);
+      }
+    } finally {
+      setIsScanning(false);
+    }
   };
 
   // Simulate scan completion with mock results
@@ -157,6 +224,39 @@ const ScanPage = () => {
         }
       );
     }, 1000);
+  };
+
+  const getFileType = (fileName: string): string => {
+    const fileExtension = fileName.split('.').pop()?.toLowerCase() || '';
+    
+    const fileTypes: { [key: string]: string } = {
+      pdf: 'PDF Document',
+      doc: 'Word Document',
+      docx: 'Word Document',
+      xls: 'Excel Spreadsheet',
+      xlsx: 'Excel Spreadsheet',
+      ppt: 'PowerPoint Presentation',
+      pptx: 'PowerPoint Presentation',
+      jpg: 'JPG Image',
+      jpeg: 'JPEG Image',
+      png: 'PNG Image',
+      gif: 'GIF Image',
+      mp3: 'Audio File',
+      wav: 'Audio File',
+      mp4: 'Video File',
+      avi: 'Video File',
+      mov: 'Video File',
+      zip: 'Archive',
+      rar: 'Archive',
+      '7z': 'Archive',
+      exe: 'Windows Executable',
+      dll: 'Dynamic Link Library',
+      js: 'JavaScript File',
+      html: 'HTML File',
+      htm: 'HTML File'
+    };
+
+    return fileTypes[fileExtension] || 'Unknown File';
   };
 
   // Reset state for a new scan
