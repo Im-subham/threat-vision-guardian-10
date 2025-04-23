@@ -1,7 +1,9 @@
+
 import React, { useState, useEffect } from 'react';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import FileUpload from '@/components/scanner/FileUpload';
+import UrlInput from '@/components/scanner/UrlInput';
 import ScanOptions, { ScanEngine } from '@/components/scanner/ScanOptions';
 import ScanResult, { ScanResultData } from '@/components/scanner/ScanResult';
 import { Button } from '@/components/ui/button';
@@ -10,6 +12,7 @@ import { scanFileWithVirusTotal } from '@/components/scanner/VirusTotalService';
 
 const ScanPage = () => {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [selectedUrl, setSelectedUrl] = useState<string | null>(null);
   const [scanEngine, setScanEngine] = useState<ScanEngine>('both');
   const [isScanning, setIsScanning] = useState(false);
   const [scanProgress, setScanProgress] = useState(0);
@@ -18,14 +21,22 @@ const ScanPage = () => {
   // Handle file selection
   const handleFileSelected = (file: File) => {
     setSelectedFile(file);
+    setSelectedUrl(null);
+    setScanResult(null);
+  };
+
+  // Handle URL submission
+  const handleUrlSubmitted = (url: string) => {
+    setSelectedUrl(url);
+    setSelectedFile(null);
     setScanResult(null);
   };
 
   // Handle scan initiation
   const handleStartScan = async () => {
-    if (!selectedFile) {
-      toast.error('No file selected', {
-        description: 'Please select a file to scan'
+    if (!selectedFile && !selectedUrl) {
+      toast.error('No file or URL selected', {
+        description: 'Please select a file or enter a URL to scan'
       });
       return;
     }
@@ -58,15 +69,32 @@ const ScanPage = () => {
         }, 300);
 
         try {
-          const vtResults = await scanFileWithVirusTotal(selectedFile, apiKey);
+          let vtResults;
+          if (selectedFile) {
+            vtResults = await scanFileWithVirusTotal(selectedFile, apiKey);
+          } else if (selectedUrl) {
+            // Simulate URL scan for demo
+            await new Promise(resolve => setTimeout(resolve, 2000));
+            const isUrlMalicious = Math.random() < 0.3; // 30% chance of being malicious
+            vtResults = {
+              detectionRate: isUrlMalicious ? Math.floor(Math.random() * 40) + 30 : 0,
+              threatLevel: isUrlMalicious ? 'high' : 'safe',
+              stats: {
+                malicious: isUrlMalicious ? Math.floor(Math.random() * 20) + 10 : 0,
+                suspicious: isUrlMalicious ? Math.floor(Math.random() * 5) : 0,
+                undetected: 68 - (isUrlMalicious ? Math.floor(Math.random() * 20) + 10 : 0),
+              },
+              detectedBy: isUrlMalicious ? ['Google Safe Browsing', 'Sophos', 'Kaspersky'] : []
+            };
+          }
           
           clearInterval(progressInterval);
           setScanProgress(100);
 
           const result: ScanResultData = {
-            fileName: selectedFile.name,
-            fileSize: selectedFile.size,
-            fileType: getFileType(selectedFile.name),
+            fileName: selectedFile ? selectedFile.name : selectedUrl!,
+            fileSize: selectedFile ? selectedFile.size : 0,
+            fileType: selectedFile ? getFileType(selectedFile.name) : 'URL',
             scanEngine,
             isInfected: vtResults.detectionRate > 0,
             detectionRate: vtResults.detectionRate,
@@ -86,28 +114,16 @@ const ScanPage = () => {
             result.isInfected ? 'Threat detected!' : 'Scan completed',
             {
               description: result.isInfected 
-                ? 'The scanned file contains malicious code' 
-                : 'No threats were found in the file'
+                ? 'The scanned content contains malicious code' 
+                : 'No threats were found'
             }
           );
         } catch (error) {
           toast.error('VirusTotal scan failed', {
-            description: 'An error occurred while scanning the file'
+            description: 'An error occurred while scanning'
           });
           console.error('VirusTotal scan error:', error);
         }
-      } else {
-        // Simulate scanning progress
-        const interval = setInterval(() => {
-          setScanProgress(prev => {
-            if (prev >= 100) {
-              clearInterval(interval);
-              simulateCompleteScan();
-              return 100;
-            }
-            return prev + Math.floor(Math.random() * 5) + 1;
-          });
-        }, 300);
       }
     } finally {
       setIsScanning(false);
@@ -262,6 +278,7 @@ const ScanPage = () => {
   // Reset state for a new scan
   const handleNewScan = () => {
     setSelectedFile(null);
+    setSelectedUrl(null);
     setScanResult(null);
     setScanProgress(0);
   };
@@ -280,12 +297,30 @@ const ScanPage = () => {
               disabled={isScanning}
             />
             
-            <FileUpload 
-              onFileSelected={handleFileSelected}
-              isScanning={isScanning}
-            />
+            <div className="space-y-6 mt-6">
+              <FileUpload 
+                onFileSelected={handleFileSelected}
+                isScanning={isScanning}
+              />
+              
+              <div className="relative py-4">
+                <div className="absolute inset-0 flex items-center">
+                  <div className="w-full border-t"></div>
+                </div>
+                <div className="relative flex justify-center">
+                  <span className="bg-background px-4 text-sm text-muted-foreground">
+                    OR
+                  </span>
+                </div>
+              </div>
+              
+              <UrlInput 
+                onUrlSubmitted={handleUrlSubmitted}
+                isScanning={isScanning}
+              />
+            </div>
             
-            {selectedFile && !isScanning && !scanResult && (
+            {(selectedFile || selectedUrl) && !isScanning && !scanResult && (
               <div className="mt-6 flex justify-center">
                 <Button onClick={handleStartScan} disabled={isScanning} size="lg">
                   Start Scan
