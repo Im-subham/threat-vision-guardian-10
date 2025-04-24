@@ -6,7 +6,7 @@ import StatCards from '@/components/dashboard/StatCards';
 import RecentScans from '@/components/dashboard/RecentScans';
 import EnginePieChart from '@/components/dashboard/EnginePieChart';
 import DetectionBarChart from '@/components/dashboard/DetectionBarChart';
-import { ScanResultData } from '@/components/scanner/ScanResult';
+import { ScanResultData } from '@/components/scanner/types';
 import { DashboardStats } from '@/components/dashboard/StatCards';
 
 const Dashboard = () => {

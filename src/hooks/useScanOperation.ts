@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { toast } from 'sonner';
 import { scanFileWithVirusTotal, scanUrlWithVirusTotal } from '@/components/scanner/VirusTotalService';
 import { ScanEngine } from '@/components/scanner/ScanOptions';
-import { ScanResultData } from '@/components/scanner/ScanResult';
+import { ScanResultData } from '@/components/scanner/types';
 
 export const useScanOperation = () => {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
