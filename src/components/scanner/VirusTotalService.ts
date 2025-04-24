@@ -59,30 +59,47 @@ const saveScanResult = (scanResult: any, file: File, scanEngine: string) => {
 
 export const scanUrlWithVirusTotal = async (url: string, apiKey: string): Promise<any> => {
   try {
-    // Step 1: Submit the URL for scanning
+    // First, get the scan ID by submitting the URL
+    const formData = new URLSearchParams();
+    formData.append('apikey', apiKey);
+    formData.append('url', url);
+
     const submitResponse = await fetch('https://www.virustotal.com/vtapi/v2/url/scan', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded',
       },
-      body: `apikey=${apiKey}&url=${encodeURIComponent(url)}`
+      body: formData.toString()
     });
 
-    const submitData = await submitResponse.json();
-    if (!submitData.scan_id) {
+    if (!submitResponse.ok) {
       throw new Error('Failed to submit URL for scanning');
     }
 
-    // Step 2: Wait a few seconds for initial analysis
+    const submitData = await submitResponse.json();
+    
+    // Wait for a few seconds to allow initial analysis
     await new Promise(resolve => setTimeout(resolve, 3000));
 
-    // Step 3: Get the scan results
-    const resultResponse = await fetch(`https://www.virustotal.com/vtapi/v2/url/report?apikey=${apiKey}&resource=${encodeURIComponent(url)}`, {
+    // Get the scan results
+    const resultFormData = new URLSearchParams();
+    resultFormData.append('apikey', apiKey);
+    resultFormData.append('resource', url);
+
+    const resultResponse = await fetch('https://www.virustotal.com/vtapi/v2/url/report', {
       method: 'GET',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+      }
     });
 
+    if (!resultResponse.ok) {
+      throw new Error('Failed to get scan results');
+    }
+
     const resultData = await resultResponse.json();
-    
+
+    // Process and return the results
     return {
       detectionRate: (resultData.positives / resultData.total) * 100,
       threatLevel: resultData.positives > 0 ? 
