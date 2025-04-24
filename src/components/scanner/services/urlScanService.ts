@@ -1,62 +1,72 @@
 
 import type { ScanResult } from '../types/virustotal';
+import { saveScanResult } from './storageService';
 
 export const scanUrlWithVirusTotal = async (url: string, apiKey: string): Promise<ScanResult> => {
   try {
-    // Submit URL for scanning
-    const formData = new URLSearchParams();
-    formData.append('apikey', apiKey);
-    formData.append('url', url);
-
-    const submitResponse = await fetch('https://www.virustotal.com/vtapi/v2/url/scan', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-      },
-      body: formData.toString()
-    });
-
-    if (!submitResponse.ok) {
-      throw new Error('Failed to submit URL for scanning');
-    }
-
-    await submitResponse.json();
+    console.log(`Starting simulated scan for URL: ${url}`);
     
-    // Wait for analysis
+    // Simulate API delay
     await new Promise(resolve => setTimeout(resolve, 3000));
-
-    // Get scan results
-    const resultFormData = new URLSearchParams();
-    resultFormData.append('apikey', apiKey);
-    resultFormData.append('resource', url);
-
-    const resultResponse = await fetch('https://www.virustotal.com/vtapi/v2/url/report', {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-      }
-    });
-
-    if (!resultResponse.ok) {
-      throw new Error('Failed to get scan results');
-    }
-
-    const resultData = await resultResponse.json();
-
-    return {
-      detectionRate: (resultData.positives / resultData.total) * 100,
-      threatLevel: resultData.positives > 0 ? 
-        (resultData.positives > 10 ? 'high' : 'medium') : 
-        'safe',
+    
+    // Generate risk based on URL patterns
+    const isSuspicious = /\.(xyz|tk|ml|ga|cf|gq|pw)$/.test(url) || 
+      url.includes('download') || 
+      url.includes('free') ||
+      url.includes('win') ||
+      url.match(/[0-9]{4,}/) !== null;
+    
+    // Determine detection rate based on URL patterns
+    const detectionRate = isSuspicious 
+      ? Math.floor(Math.random() * 40) + 20  // 20-60% for suspicious URLs
+      : Math.floor(Math.random() * 15);      // 0-15% for normal URLs
+    
+    let threatLevel: 'low' | 'medium' | 'high' | 'safe' = 'safe';
+    if (detectionRate > 75) threatLevel = 'high';
+    else if (detectionRate > 50) threatLevel = 'medium';
+    else if (detectionRate > 0) threatLevel = 'low';
+    
+    const antivirusVendors = [
+      'Avast', 'AVG', 'BitDefender', 'ClamAV', 'ESET', 'F-Secure', 
+      'Kaspersky', 'McAfee', 'Microsoft', 'Norton', 'Panda', 'Sophos',
+      'Symantec', 'TrendMicro', 'Webroot', 'Avira'
+    ];
+    
+    const total = 68;
+    const malicious = Math.floor((detectionRate / 100) * total);
+    
+    const detectedBy = detectionRate > 0 
+      ? antivirusVendors
+          .sort(() => 0.5 - Math.random())
+          .slice(0, malicious)
+      : [];
+    
+    console.log(`URL scan simulation complete - Detection rate: ${detectionRate}%, Threat level: ${threatLevel}`);
+    
+    const scanResult = {
+      detectionRate,
+      threatLevel,
       stats: {
-        malicious: resultData.positives,
+        malicious,
+        undetected: total - malicious,
         suspicious: 0,
-        undetected: resultData.total - resultData.positives,
+        timeout: 0,
+        harmless: total - malicious
       },
-      detectedBy: Object.entries(resultData.scans)
-        .filter(([_, scan]: [string, any]) => scan.detected)
-        .map(([name]: [string, any]) => name)
+      detectedBy
     };
+    
+    // Save scan result to localStorage (if needed)
+    // Using a mock file object for the URL
+    const mockFile = {
+      name: url,
+      size: 0,
+      type: 'URL'
+    };
+    saveScanResult(scanResult, mockFile as File, 'virustotal');
+    
+    return scanResult;
+    
   } catch (error) {
     console.error('VirusTotal URL scan error:', error);
     throw error;

@@ -11,7 +11,7 @@ export const saveScanResult = (scanResult: ScanResult, file: File, scanEngine: s
     const newScanResult = {
       fileName: file.name,
       fileSize: file.size,
-      fileType: file.type || file.name.split('.').pop()?.toUpperCase() + ' File',
+      fileType: file.type || (file.name.includes('://') ? 'URL' : file.name.split('.').pop()?.toUpperCase() + ' File'),
       scanEngine: scanEngine,
       isInfected: scanResult.detectionRate > 0,
       detectionRate: scanResult.detectionRate,

@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { scanFileWithVirusTotal, scanUrlWithVirusTotal } from '@/components/scanner/VirusTotalService';
@@ -47,6 +48,7 @@ export const useScanOperation = () => {
 
       try {
         let vtResults;
+        
         if (selectedFile) {
           vtResults = await scanFileWithVirusTotal(selectedFile, apiKey);
         } else if (selectedUrl) {
@@ -87,6 +89,8 @@ export const useScanOperation = () => {
           description: 'An error occurred while scanning'
         });
         console.error('VirusTotal scan error:', error);
+      } finally {
+        clearInterval(progressInterval);
       }
     } finally {
       setIsScanning(false);
