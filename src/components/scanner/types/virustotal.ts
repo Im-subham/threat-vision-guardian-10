@@ -30,4 +30,17 @@ export interface ScanResult {
     harmless?: number;
   };
   detectedBy: string[];
+  metadata?: {
+    statusCode: number;
+    contentType: string;
+    firstSubmission?: string;
+    lastSubmission?: string;
+    lastAnalysis?: string;
+    serverIp?: string;
+    bodyLength?: number;
+    bodySha256?: string;
+    categories?: string[];
+    finalUrl?: string;
+  };
 }
+

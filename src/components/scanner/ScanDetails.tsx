@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Badge } from '@/components/ui/badge';
 import { ShieldCheck, ShieldX } from 'lucide-react';
@@ -38,29 +37,43 @@ const ScanDetails = ({ result }: ScanDetailsProps) => {
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
-          <h4 className="text-sm font-semibold mb-3">File Information</h4>
+          <h4 className="text-sm font-semibold mb-3">URL Information</h4>
           <dl className="space-y-2">
             <div className="flex justify-between">
-              <dt className="text-muted-foreground text-sm">Name:</dt>
-              <dd className="text-sm font-medium truncate max-w-[200px]">{result.fileName}</dd>
+              <dt className="text-muted-foreground text-sm">URL:</dt>
+              <dd className="text-sm font-medium truncate max-w-[200px]">
+                {result.fileName}
+              </dd>
             </div>
-            <div className="flex justify-between">
-              <dt className="text-muted-foreground text-sm">Size:</dt>
-              <dd className="text-sm font-medium">{(result.fileSize / 1024 / 1024).toFixed(2)} MB</dd>
-            </div>
-            <div className="flex justify-between">
-              <dt className="text-muted-foreground text-sm">Type:</dt>
-              <dd className="text-sm font-medium">{result.fileType}</dd>
-            </div>
-            <div className="flex justify-between">
-              <dt className="text-muted-foreground text-sm">Scan Engine:</dt>
-              <dd className="text-sm font-medium capitalize">{result.scanEngine}</dd>
-            </div>
+            {result.engineResults?.virustotal?.metadata?.statusCode && (
+              <div className="flex justify-between">
+                <dt className="text-muted-foreground text-sm">Status Code:</dt>
+                <dd className="text-sm font-medium">
+                  {result.engineResults.virustotal.metadata.statusCode}
+                </dd>
+              </div>
+            )}
+            {result.engineResults?.virustotal?.metadata?.contentType && (
+              <div className="flex justify-between">
+                <dt className="text-muted-foreground text-sm">Content Type:</dt>
+                <dd className="text-sm font-medium">
+                  {result.engineResults.virustotal.metadata.contentType}
+                </dd>
+              </div>
+            )}
+            {result.engineResults?.virustotal?.metadata?.categories && (
+              <div className="flex justify-between">
+                <dt className="text-muted-foreground text-sm">Categories:</dt>
+                <dd className="text-sm font-medium">
+                  {result.engineResults.virustotal.metadata.categories.join(', ')}
+                </dd>
+              </div>
+            )}
           </dl>
         </div>
 
         <div>
-          <h4 className="text-sm font-semibold mb-3">Threat Assessment</h4>
+          <h4 className="text-sm font-semibold mb-3">Scan Details</h4>
           <dl className="space-y-2">
             <div className="flex justify-between">
               <dt className="text-muted-foreground text-sm">Status:</dt>
@@ -84,6 +97,22 @@ const ScanDetails = ({ result }: ScanDetailsProps) => {
                 <ThreatLevelBadge level={result.threatLevel} />
               </dd>
             </div>
+            {result.engineResults?.virustotal?.metadata?.lastAnalysis && (
+              <div className="flex justify-between">
+                <dt className="text-muted-foreground text-sm">Last Analysis:</dt>
+                <dd className="text-sm font-medium">
+                  {new Date(result.engineResults.virustotal.metadata.lastAnalysis).toLocaleString()}
+                </dd>
+              </div>
+            )}
+            {result.engineResults?.virustotal?.metadata?.firstSubmission && (
+              <div className="flex justify-between">
+                <dt className="text-muted-foreground text-sm">First Seen:</dt>
+                <dd className="text-sm font-medium">
+                  {new Date(result.engineResults.virustotal.metadata.firstSubmission).toLocaleString()}
+                </dd>
+              </div>
+            )}
           </dl>
         </div>
       </div>

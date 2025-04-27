@@ -20,7 +20,8 @@ export const saveScanResult = (scanResult: ScanResult, file: File, scanEngine: s
         virustotal: {
           positives: scanResult.stats.malicious,
           total: scanResult.stats.malicious + scanResult.stats.undetected,
-          detectedBy: scanResult.detectedBy
+          detectedBy: scanResult.detectedBy,
+          metadata: scanResult.metadata
         }
       },
       scanDate: new Date().toISOString()
@@ -36,3 +37,4 @@ export const saveScanResult = (scanResult: ScanResult, file: File, scanEngine: s
     return null;
   }
 };
+
