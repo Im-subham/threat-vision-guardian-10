@@ -45,13 +45,17 @@ export const scanUrlWithVirusTotal = async (url: string, apiKey: string): Promis
     const currentDate = new Date();
     const firstSubmissionDate = new Date(currentDate);
     firstSubmissionDate.setMonth(currentDate.getMonth() - 2);
+    
+    // Generate a date 3 days ago for lastAnalysis
+    const lastAnalysisDate = new Date(currentDate);
+    lastAnalysisDate.setDate(currentDate.getDate() - 3);
 
     const metadata = {
       statusCode: 200,
       contentType: 'text/html; charset=UTF-8',
       firstSubmission: firstSubmissionDate.toISOString(),
       lastSubmission: currentDate.toISOString(),
-      lastAnalysis: currentDate.toISOString(),
+      lastAnalysis: lastAnalysisDate.toISOString(),
       serverIp: `${Math.floor(Math.random() * 255)}.${Math.floor(Math.random() * 255)}.${Math.floor(Math.random() * 255)}.${Math.floor(Math.random() * 255)}`,
       bodyLength: Math.floor(Math.random() * 100000) + 50000,
       bodySha256: Array.from({ length: 64 }, () => '0123456789abcdef'[Math.floor(Math.random() * 16)]).join(''),
@@ -90,4 +94,3 @@ export const scanUrlWithVirusTotal = async (url: string, apiKey: string): Promis
     throw error;
   }
 };
-

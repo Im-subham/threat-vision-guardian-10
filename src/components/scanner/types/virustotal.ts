@@ -43,4 +43,3 @@ export interface ScanResult {
     finalUrl?: string;
   };
 }
-

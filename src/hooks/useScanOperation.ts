@@ -59,7 +59,7 @@ export const useScanOperation = () => {
 
         const result: ScanResultData = {
           fileName: selectedFile ? selectedFile.name : selectedUrl!,
-          fileSize: selectedFile ? selectedFile.size : 0,
+          fileSize: selectedFile ? selectedFile.size : vtResults.metadata?.bodyLength || 0,
           fileType: selectedFile ? getFileType(selectedFile.name) : 'URL',
           scanEngine,
           isInfected: vtResults.detectionRate > 0,
@@ -69,7 +69,8 @@ export const useScanOperation = () => {
             virustotal: {
               positives: vtResults.stats.malicious,
               total: vtResults.stats.malicious + vtResults.stats.undetected,
-              detectedBy: vtResults.detectedBy
+              detectedBy: vtResults.detectedBy,
+              metadata: vtResults.metadata
             }
           },
           scanDate: new Date()

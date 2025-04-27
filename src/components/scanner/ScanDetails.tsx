@@ -1,6 +1,7 @@
+
 import React from 'react';
 import { Badge } from '@/components/ui/badge';
-import { ShieldCheck, ShieldX } from 'lucide-react';
+import { ShieldCheck, ShieldX, Globe } from 'lucide-react';
 import ThreatLevelBadge from './ThreatLevelBadge';
 import type { ScanResultData } from './types';
 
@@ -9,6 +10,9 @@ interface ScanDetailsProps {
 }
 
 const ScanDetails = ({ result }: ScanDetailsProps) => {
+  const isUrl = result.fileType === 'URL';
+  const metadata = result.engineResults?.virustotal?.metadata;
+  
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-center py-6">
@@ -27,9 +31,11 @@ const ScanDetails = ({ result }: ScanDetailsProps) => {
             <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-threat-safe/20 mb-4">
               <ShieldCheck className="h-10 w-10 text-threat-safe" />
             </div>
-            <h3 className="text-xl font-bold text-threat-safe mb-1">File is Safe</h3>
+            <h3 className="text-xl font-bold text-threat-safe mb-1">
+              {isUrl ? 'URL is Safe' : 'File is Safe'}
+            </h3>
             <p className="text-sm text-muted-foreground">
-              No malware or suspicious content detected
+              No security vendors flagged this {isUrl ? 'URL' : 'file'} as malicious
             </p>
           </div>
         )}
@@ -37,37 +43,49 @@ const ScanDetails = ({ result }: ScanDetailsProps) => {
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
-          <h4 className="text-sm font-semibold mb-3">URL Information</h4>
+          <h4 className="text-sm font-semibold mb-3">{isUrl ? 'URL Information' : 'File Information'}</h4>
           <dl className="space-y-2">
             <div className="flex justify-between">
-              <dt className="text-muted-foreground text-sm">URL:</dt>
+              <dt className="text-muted-foreground text-sm">{isUrl ? 'URL:' : 'Name:'}</dt>
               <dd className="text-sm font-medium truncate max-w-[200px]">
-                {result.fileName}
+                {isUrl ? metadata?.finalUrl || result.fileName : result.fileName}
               </dd>
             </div>
-            {result.engineResults?.virustotal?.metadata?.statusCode && (
+            {isUrl && metadata?.statusCode && (
               <div className="flex justify-between">
                 <dt className="text-muted-foreground text-sm">Status Code:</dt>
                 <dd className="text-sm font-medium">
-                  {result.engineResults.virustotal.metadata.statusCode}
+                  {metadata.statusCode}
                 </dd>
               </div>
             )}
-            {result.engineResults?.virustotal?.metadata?.contentType && (
+            {isUrl && metadata?.contentType && (
               <div className="flex justify-between">
                 <dt className="text-muted-foreground text-sm">Content Type:</dt>
                 <dd className="text-sm font-medium">
-                  {result.engineResults.virustotal.metadata.contentType}
+                  {metadata.contentType}
                 </dd>
               </div>
             )}
-            {result.engineResults?.virustotal?.metadata?.categories && (
+            {isUrl && metadata?.categories && metadata.categories.length > 0 && (
               <div className="flex justify-between">
                 <dt className="text-muted-foreground text-sm">Categories:</dt>
                 <dd className="text-sm font-medium">
-                  {result.engineResults.virustotal.metadata.categories.join(', ')}
+                  {metadata.categories.join(', ')}
                 </dd>
               </div>
+            )}
+            {!isUrl && (
+              <>
+                <div className="flex justify-between">
+                  <dt className="text-muted-foreground text-sm">Type:</dt>
+                  <dd className="text-sm font-medium">{result.fileType}</dd>
+                </div>
+                <div className="flex justify-between">
+                  <dt className="text-muted-foreground text-sm">Size:</dt>
+                  <dd className="text-sm font-medium">{formatFileSize(result.fileSize)}</dd>
+                </div>
+              </>
             )}
           </dl>
         </div>
@@ -94,22 +112,22 @@ const ScanDetails = ({ result }: ScanDetailsProps) => {
             <div className="flex justify-between">
               <dt className="text-muted-foreground text-sm">Threat Level:</dt>
               <dd className="text-sm font-medium">
-                <ThreatLevelBadge level={result.threatLevel} />
+                <ThreatLevelBadge level={result.threatLevel || 'safe'} />
               </dd>
             </div>
-            {result.engineResults?.virustotal?.metadata?.lastAnalysis && (
+            {metadata?.lastAnalysis && (
               <div className="flex justify-between">
                 <dt className="text-muted-foreground text-sm">Last Analysis:</dt>
                 <dd className="text-sm font-medium">
-                  {new Date(result.engineResults.virustotal.metadata.lastAnalysis).toLocaleString()}
+                  {formatDate(metadata.lastAnalysis)}
                 </dd>
               </div>
             )}
-            {result.engineResults?.virustotal?.metadata?.firstSubmission && (
+            {metadata?.firstSubmission && (
               <div className="flex justify-between">
                 <dt className="text-muted-foreground text-sm">First Seen:</dt>
                 <dd className="text-sm font-medium">
-                  {new Date(result.engineResults.virustotal.metadata.firstSubmission).toLocaleString()}
+                  {formatDate(metadata.firstSubmission)}
                 </dd>
               </div>
             )}
@@ -118,6 +136,28 @@ const ScanDetails = ({ result }: ScanDetailsProps) => {
       </div>
     </div>
   );
+};
+
+const formatFileSize = (bytes: number): string => {
+  if (bytes === 0) return '0 Bytes';
+  const k = 1024;
+  const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+};
+
+const formatDate = (dateString: string): string => {
+  const date = new Date(dateString);
+  const now = new Date();
+  
+  const diffTime = Math.abs(now.getTime() - date.getTime());
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  
+  if (diffDays <= 7) {
+    return `${diffDays} days ago`;
+  }
+  
+  return date.toLocaleDateString();
 };
 
 export default ScanDetails;

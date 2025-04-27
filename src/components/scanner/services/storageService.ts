@@ -37,4 +37,3 @@ export const saveScanResult = (scanResult: ScanResult, file: File, scanEngine: s
     return null;
   }
 };
-
