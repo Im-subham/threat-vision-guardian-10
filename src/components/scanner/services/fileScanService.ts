@@ -9,7 +9,7 @@ export const scanFileWithVirusTotal = async (file: File, apiKey: string): Promis
     // Simulate API delay
     await new Promise(resolve => setTimeout(resolve, 3000));
     
-    // Generate risk level based on file extension and file name patterns
+    // Improved file analysis logic
     const fileExtension = file.name.split('.').pop()?.toLowerCase() || '';
     const fileName = file.name.toLowerCase();
     
@@ -19,6 +19,9 @@ export const scanFileWithVirusTotal = async (file: File, apiKey: string): Promis
     const mediumRiskExtensions = ['zip', 'rar', '7z', 'iso', 'pdf', 'docm', 'xlsm'];
     // Suspicious file name patterns
     const suspiciousNamePatterns = ['crack', 'keygen', 'patch', 'hack', 'trojan', 'virus', 'malware', 'rootkit'];
+    
+    // Common safe extensions and file types
+    const safeExtensions = ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp', 'txt', 'csv', 'mp3', 'wav'];
     
     let maliciousFactor = 0;
     
@@ -30,28 +33,36 @@ export const scanFileWithVirusTotal = async (file: File, apiKey: string): Promis
     else if (mediumRiskExtensions.includes(fileExtension)) {
       maliciousFactor += 30;
     }
-    
-    // Check for suspicious name patterns
-    for (const pattern of suspiciousNamePatterns) {
-      if (fileName.includes(pattern)) {
-        maliciousFactor += 20;
-        break;
-      }
+    // Apply safety factor for safe extensions
+    else if (safeExtensions.includes(fileExtension)) {
+      maliciousFactor = 0; // Override with 0 for safe file types
     }
     
-    // Add a small random factor
-    maliciousFactor += Math.floor(Math.random() * 10);
+    // Only check for suspicious patterns if not already identified as safe
+    if (maliciousFactor > 0) {
+      // Check for suspicious name patterns
+      for (const pattern of suspiciousNamePatterns) {
+        if (fileName.includes(pattern)) {
+          maliciousFactor += 20;
+          break;
+        }
+      }
+      
+      // Add a small random factor for non-safe files
+      maliciousFactor += Math.floor(Math.random() * 5);
+    }
     
     // Cap maliciousFactor at 100
     maliciousFactor = Math.min(maliciousFactor, 100);
     
     const detectionRate = maliciousFactor;
     
-    // Determine threat level
+    // Determine threat level with better thresholds
     let threatLevel: 'low' | 'medium' | 'high' | 'safe' = 'safe';
     if (detectionRate > 60) threatLevel = 'high';
     else if (detectionRate > 30) threatLevel = 'medium';
-    else if (detectionRate > 0) threatLevel = 'low';
+    else if (detectionRate > 10) threatLevel = 'low';
+    else threatLevel = 'safe';
     
     const antivirusVendors = [
       'Avast', 'AVG', 'BitDefender', 'ClamAV', 'ESET', 'F-Secure', 
@@ -62,9 +73,9 @@ export const scanFileWithVirusTotal = async (file: File, apiKey: string): Promis
     
     const total = 68;
     const malicious = Math.floor((detectionRate / 100) * total);
-    const suspicious = Math.floor(Math.random() * 5); // Add some suspicious detections
+    const suspicious = Math.floor(Math.random() * 3); // Reduced suspicious detections
     
-    const detectedBy = detectionRate > 0 
+    const detectedBy = detectionRate > 10 
       ? antivirusVendors
           .sort(() => 0.5 - Math.random())
           .slice(0, malicious)
@@ -87,8 +98,8 @@ export const scanFileWithVirusTotal = async (file: File, apiKey: string): Promis
         malicious,
         suspicious,
         undetected: total - malicious - suspicious,
-        timeout: Math.floor(Math.random() * 3),
-        harmless: total - malicious - suspicious - Math.floor(Math.random() * 3)
+        timeout: Math.floor(Math.random() * 2),
+        harmless: total - malicious - suspicious - Math.floor(Math.random() * 2)
       },
       detectedBy,
       metadata: {

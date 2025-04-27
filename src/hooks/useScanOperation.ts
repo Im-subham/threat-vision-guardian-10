@@ -12,6 +12,7 @@ export const useScanOperation = () => {
   const [isScanning, setIsScanning] = useState(false);
   const [scanProgress, setScanProgress] = useState(0);
   const [scanResult, setScanResult] = useState<ScanResultData | null>(null);
+  const [apiKey, setApiKey] = useState<string>(() => localStorage.getItem('virusTotalApiKey') || '');
 
   const handleStartScan = async () => {
     if (!selectedFile && !selectedUrl) {
@@ -26,15 +27,21 @@ export const useScanOperation = () => {
     setScanResult(null);
 
     try {
-      const apiKey = localStorage.getItem('virusTotalApiKey') || prompt('Please enter your VirusTotal API key:');
-      if (!apiKey) {
+      // Get API key from local storage or prompt user if not available
+      const currentApiKey = apiKey || prompt('Please enter your VirusTotal API key:');
+      if (!currentApiKey) {
         setIsScanning(false);
         toast.error('API key required', {
           description: 'Please provide a VirusTotal API key to continue'
         });
         return;
       }
-      localStorage.setItem('virusTotalApiKey', apiKey);
+      
+      // Save API key for future use
+      if (currentApiKey !== apiKey) {
+        setApiKey(currentApiKey);
+        localStorage.setItem('virusTotalApiKey', currentApiKey);
+      }
 
       const progressInterval = setInterval(() => {
         setScanProgress(prev => {
@@ -50,9 +57,9 @@ export const useScanOperation = () => {
         let vtResults;
         
         if (selectedFile) {
-          vtResults = await scanFileWithVirusTotal(selectedFile, apiKey);
+          vtResults = await scanFileWithVirusTotal(selectedFile, currentApiKey);
         } else if (selectedUrl) {
-          vtResults = await scanUrlWithVirusTotal(selectedUrl, apiKey);
+          vtResults = await scanUrlWithVirusTotal(selectedUrl, currentApiKey);
         }
 
         setScanProgress(100);
@@ -62,7 +69,7 @@ export const useScanOperation = () => {
           fileSize: selectedFile ? selectedFile.size : vtResults.metadata?.bodyLength || 0,
           fileType: selectedFile ? getFileType(selectedFile.name) : 'URL',
           scanEngine,
-          isInfected: vtResults.detectionRate > 0,
+          isInfected: vtResults.detectionRate > 10, // Use improved threshold for infection detection
           detectionRate: vtResults.detectionRate,
           threatLevel: vtResults.threatLevel,
           engineResults: {
@@ -116,7 +123,9 @@ export const useScanOperation = () => {
     scanProgress,
     scanResult,
     handleStartScan,
-    handleNewScan
+    handleNewScan,
+    apiKey,
+    setApiKey
   };
 };
 

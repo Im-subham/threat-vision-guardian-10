@@ -1,19 +1,27 @@
 
 import { ScanResult } from '../types/virustotal';
 
-export const saveScanResult = (scanResult: ScanResult, file: File, scanEngine: string) => {
+export const saveScanResult = (scanResult: ScanResult, file: File | string, scanEngine: string) => {
   try {
     // Get existing scan history
     const existingHistoryJson = localStorage.getItem('scanHistory');
     const existingHistory = existingHistoryJson ? JSON.parse(existingHistoryJson) : [];
     
-    // Create new scan result entry
+    // Determine if this is a file or URL
+    const isFile = file instanceof File;
+    const fileName = isFile ? (file as File).name : file as string;
+    const fileSize = isFile ? (file as File).size : scanResult.metadata?.bodyLength || 0;
+    const fileType = isFile 
+      ? ((file as File).type || (fileName.includes('://') ? 'URL' : fileName.split('.').pop()?.toUpperCase() + ' File')) 
+      : 'URL';
+    
+    // Create new scan result entry with improved threat detection
     const newScanResult = {
-      fileName: file.name,
-      fileSize: file.size,
-      fileType: file.type || (file.name.includes('://') ? 'URL' : file.name.split('.').pop()?.toUpperCase() + ' File'),
+      fileName: fileName,
+      fileSize: fileSize,
+      fileType: fileType,
       scanEngine: scanEngine,
-      isInfected: scanResult.detectionRate > 0,
+      isInfected: scanResult.detectionRate > 10, // Use improved threshold
       detectionRate: scanResult.detectionRate,
       threatLevel: scanResult.threatLevel,
       engineResults: {
