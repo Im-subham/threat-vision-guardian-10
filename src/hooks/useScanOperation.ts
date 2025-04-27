@@ -68,7 +68,7 @@ export const useScanOperation = () => {
           engineResults: {
             virustotal: {
               positives: vtResults.stats.malicious,
-              total: vtResults.stats.malicious + vtResults.stats.undetected,
+              total: vtResults.stats.malicious + vtResults.stats.undetected + (vtResults.stats.suspicious || 0),
               detectedBy: vtResults.detectedBy,
               metadata: vtResults.metadata
             }
@@ -81,8 +81,8 @@ export const useScanOperation = () => {
           result.isInfected ? 'Threat detected!' : 'Scan completed',
           {
             description: result.isInfected 
-              ? 'The scanned content contains malicious code' 
-              : 'No threats were found'
+              ? `The scanned ${selectedFile ? 'file' : 'URL'} contains malicious content` 
+              : `No threats were found in the ${selectedFile ? 'file' : 'URL'}`
           }
         );
       } catch (error) {

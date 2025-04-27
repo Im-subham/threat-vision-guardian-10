@@ -23,7 +23,7 @@ const ScanDetails = ({ result }: ScanDetailsProps) => {
             </div>
             <h3 className="text-xl font-bold text-threat-high mb-1">Threat Detected</h3>
             <p className="text-sm text-muted-foreground">
-              This file contains malicious content
+              This {isUrl ? 'URL' : 'file'} contains malicious content
             </p>
           </div>
         ) : (
@@ -64,6 +64,14 @@ const ScanDetails = ({ result }: ScanDetailsProps) => {
                 <dt className="text-muted-foreground text-sm">Content Type:</dt>
                 <dd className="text-sm font-medium">
                   {metadata.contentType}
+                </dd>
+              </div>
+            )}
+            {isUrl && metadata?.serverIp && (
+              <div className="flex justify-between">
+                <dt className="text-muted-foreground text-sm">Server IP:</dt>
+                <dd className="text-sm font-medium">
+                  {metadata.serverIp}
                 </dd>
               </div>
             )}

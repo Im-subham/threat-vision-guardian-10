@@ -9,28 +9,60 @@ export const scanFileWithVirusTotal = async (file: File, apiKey: string): Promis
     // Simulate API delay
     await new Promise(resolve => setTimeout(resolve, 3000));
     
-    // Generate risk level based on file extension
+    // Generate risk level based on file extension and file name patterns
     const fileExtension = file.name.split('.').pop()?.toLowerCase() || '';
-    const isExecutable = ['exe', 'dll', 'bat', 'msi', 'js', 'vbs'].includes(fileExtension);
+    const fileName = file.name.toLowerCase();
     
-    // Higher chance of detection for executable files
-    const detectionRate = isExecutable 
-      ? Math.floor(Math.random() * 40) + 30  // 30-70% for executables
-      : Math.floor(Math.random() * 20);      // 0-20% for non-executables
+    // High-risk file extensions
+    const highRiskExtensions = ['exe', 'dll', 'bat', 'msi', 'ps1', 'vbs', 'js', 'jar', 'scr', 'cmd'];
+    // Medium-risk file extensions
+    const mediumRiskExtensions = ['zip', 'rar', '7z', 'iso', 'pdf', 'docm', 'xlsm'];
+    // Suspicious file name patterns
+    const suspiciousNamePatterns = ['crack', 'keygen', 'patch', 'hack', 'trojan', 'virus', 'malware', 'rootkit'];
     
+    let maliciousFactor = 0;
+    
+    // Check for high-risk extensions
+    if (highRiskExtensions.includes(fileExtension)) {
+      maliciousFactor += 60;
+    } 
+    // Check for medium-risk extensions
+    else if (mediumRiskExtensions.includes(fileExtension)) {
+      maliciousFactor += 30;
+    }
+    
+    // Check for suspicious name patterns
+    for (const pattern of suspiciousNamePatterns) {
+      if (fileName.includes(pattern)) {
+        maliciousFactor += 20;
+        break;
+      }
+    }
+    
+    // Add a small random factor
+    maliciousFactor += Math.floor(Math.random() * 10);
+    
+    // Cap maliciousFactor at 100
+    maliciousFactor = Math.min(maliciousFactor, 100);
+    
+    const detectionRate = maliciousFactor;
+    
+    // Determine threat level
     let threatLevel: 'low' | 'medium' | 'high' | 'safe' = 'safe';
-    if (detectionRate > 75) threatLevel = 'high';
-    else if (detectionRate > 50) threatLevel = 'medium';
+    if (detectionRate > 60) threatLevel = 'high';
+    else if (detectionRate > 30) threatLevel = 'medium';
     else if (detectionRate > 0) threatLevel = 'low';
     
     const antivirusVendors = [
       'Avast', 'AVG', 'BitDefender', 'ClamAV', 'ESET', 'F-Secure', 
       'Kaspersky', 'McAfee', 'Microsoft', 'Norton', 'Panda', 'Sophos',
-      'Symantec', 'TrendMicro', 'Webroot', 'Avira'
+      'Symantec', 'TrendMicro', 'Webroot', 'Avira', 'Malwarebytes',
+      'Fortinet', 'SentinelOne', 'Crowdstrike'
     ];
     
     const total = 68;
     const malicious = Math.floor((detectionRate / 100) * total);
+    const suspicious = Math.floor(Math.random() * 5); // Add some suspicious detections
     
     const detectedBy = detectionRate > 0 
       ? antivirusVendors
@@ -38,19 +70,36 @@ export const scanFileWithVirusTotal = async (file: File, apiKey: string): Promis
           .slice(0, malicious)
       : [];
     
-    console.log(`Simulation complete - Detection rate: ${detectionRate}%, Threat level: ${threatLevel}`);
+    console.log(`File scan simulation complete - Detection rate: ${detectionRate}%, Threat level: ${threatLevel}`);
+    
+    // Generate current date and some metadata
+    const currentDate = new Date();
+    const firstSubmissionDate = new Date(currentDate);
+    firstSubmissionDate.setMonth(currentDate.getMonth() - Math.floor(Math.random() * 6));
+    
+    const lastAnalysisDate = new Date(currentDate);
+    lastAnalysisDate.setDate(currentDate.getDate() - Math.floor(Math.random() * 10));
     
     const scanResult = {
       detectionRate,
       threatLevel,
       stats: {
         malicious,
-        undetected: total - malicious,
-        suspicious: 0,
-        timeout: 0,
-        harmless: total - malicious
+        suspicious,
+        undetected: total - malicious - suspicious,
+        timeout: Math.floor(Math.random() * 3),
+        harmless: total - malicious - suspicious - Math.floor(Math.random() * 3)
       },
-      detectedBy
+      detectedBy,
+      metadata: {
+        statusCode: 200,
+        contentType: file.type || 'application/octet-stream',
+        firstSubmission: firstSubmissionDate.toISOString(),
+        lastSubmission: currentDate.toISOString(),
+        lastAnalysis: lastAnalysisDate.toISOString(),
+        bodyLength: file.size,
+        bodySha256: Array.from({ length: 64 }, () => '0123456789abcdef'[Math.floor(Math.random() * 16)]).join(''),
+      }
     };
     
     // Save scan result to localStorage

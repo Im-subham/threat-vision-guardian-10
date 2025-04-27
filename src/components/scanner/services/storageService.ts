@@ -19,7 +19,7 @@ export const saveScanResult = (scanResult: ScanResult, file: File, scanEngine: s
       engineResults: {
         virustotal: {
           positives: scanResult.stats.malicious,
-          total: scanResult.stats.malicious + scanResult.stats.undetected,
+          total: scanResult.stats.malicious + scanResult.stats.undetected + (scanResult.stats.suspicious || 0),
           detectedBy: scanResult.detectedBy,
           metadata: scanResult.metadata
         }

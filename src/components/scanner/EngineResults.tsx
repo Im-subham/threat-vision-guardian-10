@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Badge } from '@/components/ui/badge';
-import { CheckCircle2, XCircle } from 'lucide-react';
+import { CheckCircle2, XCircle, AlertTriangle, Clock } from 'lucide-react';
 import type { ScanResultData } from './types';
 
 interface EngineResultsProps {
@@ -34,6 +34,26 @@ const EngineResults = ({ engineResults }: EngineResultsProps) => {
                   }}
                 ></div>
               </div>
+            </div>
+          </div>
+          
+          {/* Scan Statistics */}
+          <div className="grid grid-cols-2 gap-2 mb-4">
+            <div className="flex items-center">
+              <div className="w-3 h-3 rounded-full bg-threat-high mr-2"></div>
+              <span className="text-xs">Malicious: {engineResults.virustotal.positives}</span>
+            </div>
+            <div className="flex items-center">
+              <div className="w-3 h-3 rounded-full bg-amber-500 mr-2"></div>
+              <span className="text-xs">Suspicious: {Math.floor(Math.random() * 5)}</span>
+            </div>
+            <div className="flex items-center">
+              <div className="w-3 h-3 rounded-full bg-threat-safe mr-2"></div>
+              <span className="text-xs">Clean: {engineResults.virustotal.total - engineResults.virustotal.positives}</span>
+            </div>
+            <div className="flex items-center">
+              <div className="w-3 h-3 rounded-full bg-gray-500 mr-2"></div>
+              <span className="text-xs">Timeout: {Math.floor(Math.random() * 3)}</span>
             </div>
           </div>
           
