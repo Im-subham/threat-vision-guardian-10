@@ -4,118 +4,104 @@ import { saveScanResult } from './storageService';
 
 export const scanFileWithVirusTotal = async (file: File, apiKey: string): Promise<ScanResult> => {
   try {
-    console.log(`Starting simulated scan for file: ${file.name} with size: ${file.size} bytes`);
-    
-    // Simulate API delay
-    await new Promise(resolve => setTimeout(resolve, 3000));
-    
-    // Improved file analysis logic
-    const fileExtension = file.name.split('.').pop()?.toLowerCase() || '';
-    const fileName = file.name.toLowerCase();
-    
-    // High-risk file extensions
-    const highRiskExtensions = ['exe', 'dll', 'bat', 'msi', 'ps1', 'vbs', 'js', 'jar', 'scr', 'cmd'];
-    // Medium-risk file extensions
-    const mediumRiskExtensions = ['zip', 'rar', '7z', 'iso', 'pdf', 'docm', 'xlsm'];
-    // Suspicious file name patterns
-    const suspiciousNamePatterns = ['crack', 'keygen', 'patch', 'hack', 'trojan', 'virus', 'malware', 'rootkit'];
-    
-    // Common safe extensions and file types
-    const safeExtensions = ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp', 'txt', 'csv', 'mp3', 'wav'];
-    
-    let maliciousFactor = 0;
-    
-    // Check for high-risk extensions
-    if (highRiskExtensions.includes(fileExtension)) {
-      maliciousFactor += 60;
-    } 
-    // Check for medium-risk extensions
-    else if (mediumRiskExtensions.includes(fileExtension)) {
-      maliciousFactor += 30;
-    }
-    // Apply safety factor for safe extensions
-    else if (safeExtensions.includes(fileExtension)) {
-      maliciousFactor = 0; // Override with 0 for safe file types
-    }
-    
-    // Only check for suspicious patterns if not already identified as safe
-    if (maliciousFactor > 0) {
-      // Check for suspicious name patterns
-      for (const pattern of suspiciousNamePatterns) {
-        if (fileName.includes(pattern)) {
-          maliciousFactor += 20;
-          break;
+    // Get file hash (SHA-256)
+    const arrayBuffer = await file.arrayBuffer();
+    const hashBuffer = await crypto.subtle.digest('SHA-256', arrayBuffer);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+
+    // First check if file has been scanned before
+    const checkResponse = await fetch(`https://www.virustotal.com/vtapi/v2/file/report?apikey=${apiKey}&resource=${hashHex}`);
+    const checkData = await checkResponse.json();
+
+    if (checkData.response_code === 1) {
+      // File exists in VT database
+      const positives = checkData.positives || 0;
+      const total = checkData.total || 0;
+      const detectionRate = total > 0 ? (positives / total) * 100 : 0;
+
+      let threatLevel: 'low' | 'medium' | 'high' | 'safe' = 'safe';
+      if (detectionRate > 60) threatLevel = 'high';
+      else if (detectionRate > 30) threatLevel = 'medium';
+      else if (detectionRate > 10) threatLevel = 'low';
+
+      const scanResult: ScanResult = {
+        detectionRate,
+        threatLevel,
+        stats: {
+          malicious: positives,
+          suspicious: 0,
+          undetected: total - positives,
+        },
+        detectedBy: Object.entries(checkData.scans || {})
+          .filter(([, result]: [string, any]) => result.detected)
+          .map(([vendor]: [string, any]) => vendor),
+        metadata: {
+          statusCode: checkData.response_code,
+          contentType: file.type,
+          firstSubmission: checkData.scan_date,
+          lastSubmission: checkData.scan_date,
+          lastAnalysis: checkData.scan_date,
+          bodyLength: file.size,
+          bodySha256: hashHex,
         }
-      }
-      
-      // Add a small random factor for non-safe files
-      maliciousFactor += Math.floor(Math.random() * 5);
+      };
+
+      saveScanResult(scanResult, file, 'virustotal');
+      return scanResult;
     }
-    
-    // Cap maliciousFactor at 100
-    maliciousFactor = Math.min(maliciousFactor, 100);
-    
-    const detectionRate = maliciousFactor;
-    
-    // Determine threat level with better thresholds
+
+    // If file hasn't been scanned before, upload it
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('apikey', apiKey);
+
+    const uploadResponse = await fetch('https://www.virustotal.com/vtapi/v2/file/scan', {
+      method: 'POST',
+      body: formData
+    });
+
+    const uploadData = await uploadResponse.json();
+
+    // Wait for initial analysis (15 seconds)
+    await new Promise(resolve => setTimeout(resolve, 15000));
+
+    // Get scan results
+    const reportResponse = await fetch(`https://www.virustotal.com/vtapi/v2/file/report?apikey=${apiKey}&resource=${uploadData.scan_id}`);
+    const reportData = await reportResponse.json();
+
+    const positives = reportData.positives || 0;
+    const total = reportData.total || 0;
+    const detectionRate = total > 0 ? (positives / total) * 100 : 0;
+
     let threatLevel: 'low' | 'medium' | 'high' | 'safe' = 'safe';
     if (detectionRate > 60) threatLevel = 'high';
     else if (detectionRate > 30) threatLevel = 'medium';
     else if (detectionRate > 10) threatLevel = 'low';
-    else threatLevel = 'safe';
-    
-    const antivirusVendors = [
-      'Avast', 'AVG', 'BitDefender', 'ClamAV', 'ESET', 'F-Secure', 
-      'Kaspersky', 'McAfee', 'Microsoft', 'Norton', 'Panda', 'Sophos',
-      'Symantec', 'TrendMicro', 'Webroot', 'Avira', 'Malwarebytes',
-      'Fortinet', 'SentinelOne', 'Crowdstrike'
-    ];
-    
-    const total = 68;
-    const malicious = Math.floor((detectionRate / 100) * total);
-    const suspicious = Math.floor(Math.random() * 3); // Reduced suspicious detections
-    
-    const detectedBy = detectionRate > 10 
-      ? antivirusVendors
-          .sort(() => 0.5 - Math.random())
-          .slice(0, malicious)
-      : [];
-    
-    console.log(`File scan simulation complete - Detection rate: ${detectionRate}%, Threat level: ${threatLevel}`);
-    
-    // Generate current date and some metadata
-    const currentDate = new Date();
-    const firstSubmissionDate = new Date(currentDate);
-    firstSubmissionDate.setMonth(currentDate.getMonth() - Math.floor(Math.random() * 6));
-    
-    const lastAnalysisDate = new Date(currentDate);
-    lastAnalysisDate.setDate(currentDate.getDate() - Math.floor(Math.random() * 10));
-    
-    const scanResult = {
+
+    const scanResult: ScanResult = {
       detectionRate,
       threatLevel,
       stats: {
-        malicious,
-        suspicious,
-        undetected: total - malicious - suspicious,
-        timeout: Math.floor(Math.random() * 2),
-        harmless: total - malicious - suspicious - Math.floor(Math.random() * 2)
+        malicious: positives,
+        suspicious: 0,
+        undetected: total - positives,
       },
-      detectedBy,
+      detectedBy: Object.entries(reportData.scans || {})
+        .filter(([, result]: [string, any]) => result.detected)
+        .map(([vendor]: [string, any]) => vendor),
       metadata: {
-        statusCode: 200,
-        contentType: file.type || 'application/octet-stream',
-        firstSubmission: firstSubmissionDate.toISOString(),
-        lastSubmission: currentDate.toISOString(),
-        lastAnalysis: lastAnalysisDate.toISOString(),
+        statusCode: reportData.response_code,
+        contentType: file.type,
+        firstSubmission: reportData.scan_date,
+        lastSubmission: reportData.scan_date,
+        lastAnalysis: reportData.scan_date,
         bodyLength: file.size,
-        bodySha256: Array.from({ length: 64 }, () => '0123456789abcdef'[Math.floor(Math.random() * 16)]).join(''),
+        bodySha256: hashHex,
       }
     };
-    
-    // Save scan result to localStorage
+
     saveScanResult(scanResult, file, 'virustotal');
-    
     return scanResult;
   } catch (error) {
     console.error('VirusTotal API Error:', error);

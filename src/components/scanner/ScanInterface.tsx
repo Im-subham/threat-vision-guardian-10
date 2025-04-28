@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
@@ -31,11 +30,7 @@ const ScanInterface: React.FC<ScanInterfaceProps> = ({
 }) => {
   return (
     <div className="max-w-4xl mx-auto text-center">
-      <img 
-        src="/lovable-uploads/578e1dcf-aaef-4393-9807-6c48f3105905.png" 
-        alt="VirusTotal Logo" 
-        className="h-16 mx-auto mb-6"
-      />
+      <h2 className="text-2xl font-bold mb-4">Security Scanner</h2>
       <p className="text-lg text-gray-400 mb-12 max-w-2xl mx-auto">
         Analyze suspicious files, domains, IPs and URLs to detect malware and other
         breaches, automatically share them with the security community.
