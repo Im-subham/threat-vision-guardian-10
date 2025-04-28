@@ -57,25 +57,37 @@ export const useScanOperation = () => {
         let vtResults;
         
         if (selectedFile) {
+          toast.info('Scanning file...', {
+            description: 'This may take a moment'
+          });
           vtResults = await scanFileWithVirusTotal(selectedFile, currentApiKey);
         } else if (selectedUrl) {
+          toast.info('Scanning URL...', {
+            description: 'This may take a moment'
+          });
           vtResults = await scanUrlWithVirusTotal(selectedUrl, currentApiKey);
         }
 
         setScanProgress(100);
+
+        if (vtResults.metadata?.statusCode === 500) {
+          toast.error('Scan completed with errors', {
+            description: 'Some scan services were unavailable'
+          });
+        }
 
         const result: ScanResultData = {
           fileName: selectedFile ? selectedFile.name : selectedUrl!,
           fileSize: selectedFile ? selectedFile.size : vtResults.metadata?.bodyLength || 0,
           fileType: selectedFile ? getFileType(selectedFile.name) : 'URL',
           scanEngine,
-          isInfected: vtResults.detectionRate > 10, // Use improved threshold for infection detection
+          isInfected: vtResults.detectionRate > 5, // Use improved threshold for infection detection
           detectionRate: vtResults.detectionRate,
           threatLevel: vtResults.threatLevel,
           engineResults: {
             virustotal: {
               positives: vtResults.stats.malicious,
-              total: vtResults.stats.malicious + vtResults.stats.undetected + (vtResults.stats.suspicious || 0),
+              total: vtResults.stats.malicious + vtResults.stats.undetected + (vtResults.stats.suspicious || 0) + (vtResults.stats.harmless || 0),
               detectedBy: vtResults.detectedBy,
               metadata: vtResults.metadata
             }
@@ -93,8 +105,8 @@ export const useScanOperation = () => {
           }
         );
       } catch (error) {
-        toast.error('VirusTotal scan failed', {
-          description: 'An error occurred while scanning'
+        toast.error('Scan failed', {
+          description: 'An error occurred during scanning. Please try again.'
         });
         console.error('VirusTotal scan error:', error);
       } finally {
