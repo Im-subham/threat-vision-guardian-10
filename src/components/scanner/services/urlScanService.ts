@@ -4,9 +4,9 @@ import { saveScanResult } from './storageService';
 
 export const scanUrlWithVirusTotal = async (url: string, apiKey: string): Promise<ScanResult> => {
   try {
-    // First, submit URL for scanning using the v3 API
+    // First, submit URL for scanning
     const encodedUrl = encodeURIComponent(url);
-    const submitResponse = await fetch(`https://www.virustotal.com/api/v3/urls`, {
+    const submitResponse = await fetch('https://www.virustotal.com/api/v3/urls', {
       method: 'POST',
       headers: {
         'x-apikey': apiKey,
@@ -16,58 +16,70 @@ export const scanUrlWithVirusTotal = async (url: string, apiKey: string): Promis
     });
 
     if (!submitResponse.ok) {
+      console.error('VirusTotal URL submission failed:', await submitResponse.text());
       throw new Error(`VirusTotal API submission error: ${submitResponse.status}`);
     }
 
     const submitData = await submitResponse.json();
-    const analysisId = submitData.data?.id;
-    
+    const analysisId = submitData.data.id;
+
     if (!analysisId) {
       throw new Error('Failed to get analysis ID from VirusTotal');
     }
-    
-    // Wait for scan to complete (with timeout)
-    await new Promise(resolve => setTimeout(resolve, 5000));
 
-    // Get scan results using the v3 API
-    const reportResponse = await fetch(`https://www.virustotal.com/api/v3/analyses/${analysisId}`, {
-      headers: {
-        'x-apikey': apiKey
+    // Wait for the scan to complete
+    let attempts = 0;
+    const maxAttempts = 10;
+    let reportData;
+
+    while (attempts < maxAttempts) {
+      const reportResponse = await fetch(`https://www.virustotal.com/api/v3/analyses/${analysisId}`, {
+        headers: {
+          'x-apikey': apiKey
+        }
+      });
+
+      if (!reportResponse.ok) {
+        console.error('VirusTotal analysis fetch failed:', await reportResponse.text());
+        throw new Error(`VirusTotal API report error: ${reportResponse.status}`);
       }
-    });
 
-    if (!reportResponse.ok) {
-      throw new Error(`VirusTotal API report error: ${reportResponse.status}`);
+      reportData = await reportResponse.json();
+      const status = reportData.data?.attributes?.status;
+
+      if (status === 'completed') {
+        break;
+      }
+
+      // Wait before next attempt
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      attempts++;
     }
 
-    const reportData = await reportResponse.json();
-    
-    // Process the results
+    if (!reportData) {
+      throw new Error('Failed to get scan results from VirusTotal');
+    }
+
+    // Process results
     const stats = reportData.data?.attributes?.stats || {};
     const lastAnalysisResults = reportData.data?.attributes?.results || {};
-    
+
     const malicious = stats.malicious || 0;
     const suspicious = stats.suspicious || 0;
     const harmless = stats.harmless || 0;
     const undetected = stats.undetected || 0;
     const total = malicious + suspicious + harmless + undetected;
-    
-    const detectionRate = total > 0 ? (malicious / total) * 100 : 0;
+
+    const detectionRate = total > 0 ? ((malicious + suspicious) / total) * 100 : 0;
 
     let threatLevel: 'low' | 'medium' | 'high' | 'safe' = 'safe';
-    if (detectionRate > 5) threatLevel = 'high';
-    else if (detectionRate > 2) threatLevel = 'medium';
+    if (detectionRate > 10) threatLevel = 'high';
+    else if (detectionRate > 5) threatLevel = 'medium';
     else if (detectionRate > 0) threatLevel = 'low';
 
-    // Get detected vendors
     const detectedBy = Object.entries(lastAnalysisResults)
-      .filter(([, result]: [string, any]) => result.category === 'malicious')
+      .filter(([, result]: [string, any]) => result.category === 'malicious' || result.category === 'suspicious')
       .map(([vendor]: [string, any]) => vendor);
-
-    // Get categories
-    const categories = Object.entries(lastAnalysisResults)
-      .map(([, result]: [string, any]) => result.result)
-      .filter(Boolean);
 
     const scanResult: ScanResult = {
       detectionRate,
@@ -76,48 +88,28 @@ export const scanUrlWithVirusTotal = async (url: string, apiKey: string): Promis
         malicious,
         suspicious,
         undetected,
-        harmless: harmless || 0
+        harmless
       },
       detectedBy,
       metadata: {
         statusCode: 200,
         contentType: 'URL',
-        firstSubmission: reportData.data?.attributes?.date || new Date().toISOString(),
-        lastSubmission: reportData.data?.attributes?.date || new Date().toISOString(),
-        lastAnalysis: reportData.data?.attributes?.date || new Date().toISOString(),
+        firstSubmission: reportData.data?.attributes?.date,
+        lastSubmission: reportData.data?.attributes?.date,
+        lastAnalysis: reportData.data?.attributes?.date,
         bodyLength: url.length,
         finalUrl: url,
-        categories: categories
+        categories: Object.values(lastAnalysisResults)
+          .map((result: any) => result.result)
+          .filter(Boolean)
       }
     };
 
     // Save scan result
     saveScanResult(scanResult, url, 'virustotal');
-
     return scanResult;
   } catch (error) {
     console.error('VirusTotal API Error:', error);
-    
-    // Create fallback result for when API fails
-    const fallbackResult: ScanResult = {
-      detectionRate: 0,
-      threatLevel: 'safe',
-      stats: {
-        malicious: 0,
-        suspicious: 0,
-        undetected: 1,
-        harmless: 0
-      },
-      detectedBy: [],
-      metadata: {
-        statusCode: 500,
-        contentType: 'URL',
-        bodyLength: url.length,
-        finalUrl: url,
-        categories: ['API Error - Unable to scan']
-      }
-    };
-    
-    return fallbackResult;
+    throw error;
   }
 };
