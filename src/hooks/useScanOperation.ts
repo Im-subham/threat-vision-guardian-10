@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { scanFileWithVirusTotal, scanUrlWithVirusTotal } from '@/components/scanner/VirusTotalService';
@@ -12,7 +11,7 @@ export const useScanOperation = () => {
   const [isScanning, setIsScanning] = useState(false);
   const [scanProgress, setScanProgress] = useState(0);
   const [scanResult, setScanResult] = useState<ScanResultData | null>(null);
-  const [apiKey, setApiKey] = useState<string>(() => localStorage.getItem('virusTotalApiKey') || '');
+  const [apiKey] = useState<string>('acd8effa2bc8f813048fd93ed6eed9ea7d7e33d6b765aaf9d0401d8f7707142b');
 
   const handleStartScan = async () => {
     if (!selectedFile && !selectedUrl) {
@@ -39,8 +38,7 @@ export const useScanOperation = () => {
       
       // Save API key for future use
       if (currentApiKey !== apiKey) {
-        setApiKey(currentApiKey);
-        localStorage.setItem('virusTotalApiKey', currentApiKey);
+        
       }
 
       const progressInterval = setInterval(() => {
@@ -137,7 +135,7 @@ export const useScanOperation = () => {
     handleStartScan,
     handleNewScan,
     apiKey,
-    setApiKey
+    
   };
 };
 
