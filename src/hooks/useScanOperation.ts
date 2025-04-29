@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { scanFileWithVirusTotal, scanUrlWithVirusTotal } from '@/components/scanner/VirusTotalService';
@@ -26,19 +27,14 @@ export const useScanOperation = () => {
     setScanResult(null);
 
     try {
-      // Get API key from local storage or prompt user if not available
-      const currentApiKey = apiKey || prompt('Please enter your VirusTotal API key:');
+      // Get API key from state
+      const currentApiKey = apiKey;
       if (!currentApiKey) {
         setIsScanning(false);
         toast.error('API key required', {
           description: 'Please provide a VirusTotal API key to continue'
         });
         return;
-      }
-      
-      // Save API key for future use
-      if (currentApiKey !== apiKey) {
-        
       }
 
       const progressInterval = setInterval(() => {
@@ -106,7 +102,7 @@ export const useScanOperation = () => {
         toast.error('Scan failed', {
           description: 'An error occurred during scanning. Please try again.'
         });
-        console.error('VirusTotal scan error:', error);
+        console.error('Scanning error:', error);
       } finally {
         clearInterval(progressInterval);
       }
@@ -135,7 +131,6 @@ export const useScanOperation = () => {
     handleStartScan,
     handleNewScan,
     apiKey,
-    
   };
 };
 
