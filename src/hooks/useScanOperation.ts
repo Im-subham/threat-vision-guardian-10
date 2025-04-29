@@ -56,8 +56,8 @@ export const useScanOperation = () => {
           });
           vtResults = await scanFileWithVirusTotal(selectedFile, currentApiKey);
         } else if (selectedUrl) {
-          toast.info('Scanning URL...', {
-            description: 'This may take a moment'
+          toast.info('Scanning URL with VirusTotal...', {
+            description: 'This may take a moment while we check with VirusTotal'
           });
           vtResults = await scanUrlWithVirusTotal(selectedUrl, currentApiKey);
         }
